@@ -1,0 +1,408 @@
+---
+title: "311 Service Calls"
+author: "Dylan Rowe"
+date: "February 26, 2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+servicecalls <- read.csv("C:/Users/Dylan/Documents/MSDA/SEM3/Data Analytics Applications/311 San Antonio Project/allservicecalls.csv", header = TRUE, sep = ",")
+```
+
+```{r}
+str(servicecalls)
+```
+
+#Clean the data into the proper formats we want to use going forward.
+```{r}
+servicecalls$OPENEDDATETIME = as.Date(servicecalls$OPENEDDATETIME, "%m/%d/%Y")
+servicecalls$SLA_Date = as.Date(servicecalls$SLA_Date, tryFormats = c("%m/%d/%Y", NA, ""))
+servicecalls$CLOSEDDATETIME = as.Date(servicecalls$CLOSEDDATETIME, tryFormats = c("%m/%d/%Y", NA, ""))
+servicecalls$OBJECTDESC = as.character(servicecalls$OBJECTDESC)
+servicecalls$Council.District = as.factor(servicecalls$Council.District)
+servicecalls = servicecalls[,-c(16,17)]
+colnames(servicecalls)[6] = "Late"
+head(servicecalls)
+```
+
+#Extract the month from the opened date variable
+```{r}
+library(lubridate)
+servicecalls$OpenMonth <- month(servicecalls$OPENEDDATETIME)
+servicecalls$OpenMonth <- as.factor(servicecalls$OpenMonth)
+levels(servicecalls$OpenMonth) <- c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+head(servicecalls)
+```
+
+#Extract the Day the call was made
+```{r}
+day = as.Date(servicecalls$OPENEDDATETIME, "%m/%d/Y")
+servicecalls$day_of_week = as.factor(wday(day))
+levels(servicecalls$day_of_week) = c("Sunday", 
+                                     "Monday", 
+                                     "Tuesday", 
+                                     "Wednesday", 
+                                     "Thursday", 
+                                     "Friday", 
+                                     "Saturday")
+```
+
+```{r}
+head(servicecalls)
+```
+
+
+#Filter the data to observations opened in 2018 and 2019 alone. Only lose 9299 observations
+```{r}
+servicecalls = subset(servicecalls, servicecalls$OPENEDDATETIME >= "2018-01-01")
+```
+
+```{r}
+summary(servicecalls)
+```
+
+#Most Called Addresses
+```{r}
+head(sort(table(servicecalls$OBJECTDESC), decreasing = TRUE),20)
+```
+
+```{r}
+HighestAddresses = subset(servicecalls, servicecalls$OBJECTDESC %in% c("10133  FIGARO CANYON, San Antonio, 78251", "834  BARREL POINT, San Antonio, 78251", "838  BARREL POINT, San Antonio, 78251", "837  BARREL POINT, San Antonio, 78251", "861  BARREL POINT, San Antonio, 78251", "939  MARBLE POINT, San Antonio, 78251", "928  MARBLE POINT, San Antonio, 78251", "814  BARREL POINT, San Antonio, 78251", "865  BARREL POINT, San Antonio, 78251"))
+```
+
+```{r}
+summary(HighestAddresses)
+```
+
+```{r}
+ggplot(HighestAddresses, aes(x = OBJECTDESC, fill = Category)) + 
+  geom_bar(color = "black", position = "dodge") + 
+  geom_text(stat = "count", aes(label = ..count..),
+            position = position_dodge(width = 1), vjust = "inward", hjust = .4, color = "black") +
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Cases by Address") +
+  theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+```{r}
+ggplot(HighestAddresses, aes(x = OpenMonth, fill = OBJECTDESC)) + 
+  geom_bar(color = "black") + 
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Cases by Address") +
+  theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+```{r}
+ggplot(HighestAddresses, aes(x = OBJECTDESC, fill = SourceID)) + 
+  geom_bar(color = "black") + 
+  scale_y_log10() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Cases by Address") +
+  theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+```{r}
+MeanOldMan = subset(servicecalls, servicecalls$OBJECTDESC == "10133  FIGARO CANYON, San Antonio, 78251")
+summary(MeanOldMan)
+```
+
+#Most Called Dept
+```{r}
+sort(table(servicecalls$Dept), decreasing = TRUE)
+```
+
+#Most Called Typename
+```{r}
+head(sort(table(servicecalls$TYPENAME), decreasing = TRUE),25)
+```
+
+#Number of Service Calls per Day
+```{r}
+library(ggplot2)
+ggplot(servicecalls, aes(x = day_of_week, fill = day_of_week)) + 
+  geom_bar(color = "black", position = "dodge", show.legend = FALSE) +
+  geom_text(stat = "count", aes(label = ..count.., group = day_of_week),
+            position = position_dodge(width = 1), vjust = 1.5, hjust = .4, color = "black") +
+  labs(x = "Day of the Week", y = "Number of Service Calls", title = "Service Calls by Day") + 
+  theme(axis.text.x = element_text(face = "bold",color = "black", angle = 45,
+                                   vjust =.2, hjust = .2),
+        axis.text.y = element_text(face = "bold",color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Late Calls per Day
+```{r}
+library(ggplot2)
+ggplot(servicecalls, aes(x = day_of_week, fill = day_of_week)) + 
+  geom_bar(aes(fill = Late),color = "black", position = "dodge") + 
+  labs(x = "Day of the Week", y = "Number of Service Calls", title = "Service Calls by Day") + 
+  theme(axis.text.x = element_text(face = "bold",color = "black", angle = 45,
+                                   vjust =.2, hjust = .2),
+        axis.text.y = element_text(face = "bold",color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Calls per Month
+```{r}
+library(ggplot2)
+ggplot(servicecalls, aes(x = OpenMonth, fill = OpenMonth)) + 
+  geom_bar(color = "black", show.legend = FALSE) + 
+  labs(x = "Month of the Year", y = "Number of Service Calls", title = "Service Calls by Month") + 
+  theme(axis.text.x = element_text(face = "bold",color = "black"),
+        axis.text.y = element_text(face = "bold",color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Late Cases by Department
+```{r}
+library(ggplot2)
+ggplot(servicecalls, aes(x = Late)) + 
+  geom_bar(aes(fill = Dept), color = "black", position = "dodge") + 
+  labs(x = "Late Response", y = "Number of Cases", 
+       title = "Number of Late Cases by Department") + 
+  scale_y_log10() + theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Late Cases by source ID
+```{r}
+ggplot(servicecalls, aes(x = Late)) + 
+  geom_bar(aes(fill = SourceID), color = "black", position = "dodge") + 
+  geom_text(stat = "count", aes(label = ..count.., group = SourceID),
+            position = position_dodge(width = 1), vjust = -0.35, hjust = .4, color = "black") +
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Late Cases by Source ID") +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+#Source ID
+```{r}
+ggplot(servicecalls, aes(x = SourceID, fill = SourceID)) + 
+  geom_bar(color = "black", position = "dodge", show.legend = FALSE) + 
+  geom_text(stat = "count", aes(label = ..count.., group = SourceID),
+            position = position_dodge(width = 1), vjust = -0.35, hjust = .4, color = "black") +
+  scale_y_continuous() + 
+  labs(x = "Source of Request", y = "Number of Cases",
+       title = "Number of Cases by Source ID") +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Late Cases by Council District
+```{r}
+ggplot(servicecalls, aes(x = Late)) + 
+  geom_bar(aes(fill = Council.District), color = "black", position = "dodge") +
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Late Cases by Source ID") +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Subset the data by New vs Old App
+```{r}
+OldApp = subset(servicecalls, servicecalls$OPENEDDATETIME < "2018-08-15")
+NewApp = subset(servicecalls, servicecalls$OPENEDDATETIME >= "2018-08-15")
+OldApp = subset(OldApp, OldApp$SourceID %in% "311 Mobile App")
+NewApp = subset(NewApp, NewApp$SourceID %in% "311 Mobile App")
+```
+
+#Plot Number of Late Cases by New App versus Old App
+```{r}
+par(mfrow=c(2,1))
+ggplot(OldApp, aes(x = Late)) + 
+  geom_bar(aes(fill = Dept), color = "black", position = "dodge") +
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Late Cases by Source ID Using the Old App") +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+ggplot(NewApp, aes(x = Late)) + 
+  geom_bar(aes(fill = Dept), color = "black", position = "dodge") +
+  scale_y_continuous() + 
+  labs(x = "Late Response", y = "Number of Cases",
+       title = "Number of Late Cases by Source ID Using the New App") +
+  theme(axis.text.x = element_text(face = "bold", color = "black"),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+
+#Lets build a subset of the data with no missing date values and then calculate the amount of days each case takes to complete
+```{r}
+DateData = subset(servicecalls, !is.na(servicecalls$CLOSEDDATETIME))
+DateData$days_to_complete = as.numeric(DateData$CLOSEDDATETIME - DateData$OPENEDDATETIME)
+DateData = subset(DateData, !is.na(DateData$Dept))
+```
+
+#Average Days to Respond by Category
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$Category, mean), varnames="Category", value.name="mean")
+
+ ggplot(plot.data, aes(x = Category, y = mean, fill = Category)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = 1) + 
+   labs(x = "Category of Call",
+        y = "Number of Days",
+        title = "Average Response Time by Category") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Average Days to Respond by Department
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$Dept, mean), varnames="Dept", value.name="mean")
+
+ ggplot(plot.data, aes(x = Dept, y = mean, fill = Dept)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = "inward") + 
+   labs(x = "Department of Call",
+        y = "Number of Days",
+        title = "Average Response Time by Department") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Days to respond by Month Case was Opened
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$OpenMonth, mean), varnames="OpenMonth", value.name="mean")
+
+ ggplot(plot.data, aes(x = OpenMonth, y = mean, fill = OpenMonth)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = 1) + 
+   labs(x = "Month",
+        y = "Number of Days",
+        title = "Average Response Time by Month") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Response Time by Day Case was opened
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$day_of_week, mean), varnames="day_of_week", value.name="mean")
+
+ ggplot(plot.data, aes(x = day_of_week, y = mean, fill = day_of_week)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = 1) + 
+   labs(x = "Day of the Week",
+        y = "Number of Days",
+        title = "Average Response Time by Day") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Days by Council District
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$Council.District, mean), varnames="Council.District", value.name="mean")
+
+ ggplot(plot.data, aes(x = as.factor(Council.District), y = mean, fill = Council.District)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = 1) + 
+   labs(x = "Council District ",
+        y = "Number of Days",
+        title = "Average Response Time by District") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 0),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
+#Make a test and train set for the datedata
+```{r}
+set.seed(123)
+train <- sample(1:nrow(DateData), 0.7*nrow(DateData))
+test <- -train
+daystrain <- DateData[train,]
+daystest <- DateData[test,]
+```
+
+
+#We will run a linear regression to see what factors have the highest influence on how long it takes to complete a service request
+```{r}
+library(caret)
+linear.days.model = lm(days_to_complete ~ Category + OpenMonth + day_of_week, data = daystrain)
+summary(linear.days.model)
+lin.days.preds = predict(linear.days.model, newdata = daystest)
+postResample(lin.days.preds, daystest$days_to_complete)
+```
+
+#Run the model but exchange Dept for Category
+```{r}
+library(caret)
+linear.days.model = lm(days_to_complete ~ Dept+ OpenMonth + day_of_week, data = daystrain)
+summary(linear.days.model)
+lin.days.preds = predict(linear.days.model, newdata = daystest)
+postResample(lin.days.preds, daystest$days_to_complete)
+```
+
+#Response Time by Source ID
+```{r}
+require(reshape2)
+plot.data <- melt(tapply(DateData$days_to_complete, DateData$SourceID, mean), varnames="SourceID", value.name="mean")
+
+ ggplot(plot.data, aes(x = SourceID, y = mean, fill = SourceID)) + 
+   geom_bar(position="dodge", stat="identity") + 
+   geom_text(stat = "identity", aes(label = round(mean,0), group = mean),
+             vjust = 1) + 
+   labs(x = "Source",
+        y = "Number of Days",
+        title = "Average Response Time by Source of Request") + 
+   theme(axis.text.x = element_text(face = "bold", color = "black", angle = 270),
+        axis.title.x = element_text(color = "black", face = "italic"),
+        axis.title.y = element_text(color = "black", face = "italic"),
+        panel.background = element_rect(fill = "white", color = "black"))
+```
+
