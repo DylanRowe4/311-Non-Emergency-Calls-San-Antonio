@@ -13,7 +13,7 @@ library(rpart.plot)
 library(caret)
 
 #Data Set 
-allservicecalls <- read.csv("F:/Master's Courses UTSA/Spring 2019/Data Applications/Project/allservicecalls.csv")
+allservicecalls <- read.csv(".../allservicecalls.csv")
 
 #Copy of Data Set
 servicecalls <- allservicecalls
