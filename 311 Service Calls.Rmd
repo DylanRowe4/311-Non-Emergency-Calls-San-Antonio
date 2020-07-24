@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-servicecalls <- read.csv("C:/Users/Dylan/Documents/MSDA/SEM3/Data Analytics Applications/311 San Antonio Project/allservicecalls.csv", header = TRUE, sep = ",")
+servicecalls <- read.csv("C:/Users/allservicecalls.csv", header = TRUE, sep = ",")
 ```
 
 ```{r}
